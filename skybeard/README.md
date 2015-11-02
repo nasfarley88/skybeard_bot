@@ -15,7 +15,6 @@ The bot script is `skb_bot.py` and is run as a regular python script
 ```python skb_bot.py```
 
 The commands currently available are:
-**Commands:**
 * `/dota` - creates a new dota event and precedes the specifed time after "at". E.g:
  * `/dota at 18:45`
  * `/dota at 1845`
@@ -33,8 +32,8 @@ The commands currently available are:
 * `/topfeeds` - Poll the Dota 2 API for everyone's last 25 matches, giving rankings by total deaths
 * `/lastmatch` - Poll the Dota 2 API for your last played match and link the DotaBuff page
     
-*Keywords*:
-  I can be asked if there is a five stack in multiple ways, as well as if/when Dota is happening
+**Keywords**:
+    I can be asked if there is a five stack in multiple ways, as well as if/when Dota is happening
     
   
 
