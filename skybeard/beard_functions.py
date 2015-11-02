@@ -28,21 +28,15 @@ def feeding(bot,message):
     i=0;
     for rank in feeds:
         i+=1
-        table+=str(i)+"....."
-        +str(rank['dota_name'])+"...."
-        +str(rank['total_deaths'])+"\n"    
+        table+=str(i)+"....."+str(rank['dota_name'])+"...."+str(rank['total_deaths'])+"\n"    
     sendText(bot,message.chat_id,table)
     
-    footer = "Congratulations to "
-    +str(feeds[0]['dota_name'])
-    +"! \nCheck out the match where he fed the most ("
-    +str(feeds[0]['top_deaths'])+" times!)"
+    footer = "Congratulations to "+str(feeds[0]['dota_name'])+"! \nCheck out the match where he fed the most ("+str(feeds[0]['top_deaths'])+" times!)"
 
     sendText(bot,message.chat_id,footer)
 
     bot.sendMessage(chat_id=message.chat_id,
-            text="["+str(feeds[0]['dota_name'])
-            +"'s DotaBuff Match](http://dotabuff.com/matches/"+str(feeds[0]['top_match'])+").",
+            text="["+str(feeds[0]['dota_name'])+"'s DotaBuff Match](http://dotabuff.com/matches/"+str(feeds[0]['top_match'])+").",
             parse_mode=telegram.ParseMode.MARKDOWN)
 
 #Wrapper for telegram.bot.sendMessage() function
