@@ -12,8 +12,6 @@ from os.path import abspath, join, dirname
 import os
 from datetime import date, timedelta
 import msg_texts
-from PIL import Image
-import multipart
 
 sys.path.append(abspath(join(abspath(dirname(__file__)), "..")))
 
