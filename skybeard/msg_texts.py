@@ -9,8 +9,10 @@ def help():
     
     */dota* - creates a new dota event and precedes the specifed time after "at". E.g:
         "*/dota at 18:45*"
+        "*/dota at 18.45*"
         "*/dota at 1845*"
         "*/dota*" - will create dota event with default time (19:30)
+        If a dota event already exists, the time will just be modified 
     
     */delete dota* - will remove the current dota event
     
@@ -30,7 +32,6 @@ def help():
     
     *Keywords*:
         I can be asked if there is a five stack in multiple ways, as well as if/when Dota is happening
-
     '''
     return msg
 
@@ -49,6 +50,7 @@ msgs ={
         
         #dota event messages
         'w'     :       'with',
+        't_error':       'I didn\'t understand the time you specified and defaulted to 19:30. Did you format it correctly?',
         'notime':       'No Time specified. Defaulting to 19:30',
         'nodota':       'I don\'t know about any dota happening today',
         'makedota':     'Dota event created for',
