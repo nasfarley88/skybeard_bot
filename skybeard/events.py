@@ -55,20 +55,25 @@ class dota:
 
 
 
-    def shotgun(self,message):
+    def shotgun(self,message,user_str=''):
         infoprint(self.bot,message,"shotgun request")
-        if message.from_user.first_name not in self.people:
-            self.people.append(message.from_user.first_name)
+        if user_str is '':
+            first_name = message.from_user.first_name
+        else:
+            first_name = user_str
+
+        if first_name not in self.people:
             sendText(self.bot,
                     message.chat_id,
-                    ' '.join([message.from_user.first_name,
+                    ' '.join([first_name,
                         msgs['shotgun'],
                     self.time+" with: \n",
                     ', '.join(self.people)])
                     )
+            self.people.append(first_name)
         else:
             sendText(self.bot,message.chat_id,
-                    ''.join([message.from_user.first_name,
+                    ''.join([first_name,
                     ", you already shotgunned"])
                     )
         
@@ -136,7 +141,7 @@ class dota:
 
     def time_info(self,message):
         infoprint(self.bot,message,"dota time info request")
-        self.dtime = self.date_dota-datetime.datetime.now()
+        self.dtime = self.date_dota-datetime.datetime.now()+datetime.timedelta(hours=1) #accounts for time zone difference. Remove when server is UK side.
         dt_hours,dt_minutes,dt_seconds = get_dtime(self.dtime)
         dtime_str = ':'.join([dt_hours,dt_minutes,dt_seconds])
         sendText(self.bot,message.chat_id,
@@ -144,6 +149,14 @@ class dota:
                 +tformat(self.date_dota)
                 +", in "+dtime_str
                 +"\n*Shotguns:*\n"+', '.join(self.people))
+
+    def tcheck(self,message):
+        mins = 15
+        if self.date_dota - datetime.datetime.now() < datetime.timedelta(minutes=mins):
+            sendText(self.bot,message.chat_id,'less than '+str(mins)+' minutes until dota! Get hype!')
+            return True
+        else: 
+            return False
 
 def nodota(bot, message):
     
@@ -158,11 +171,20 @@ def remove_list_val(the_list, val):
 def tformat(date):
     return str(date.hour).zfill(2)+":"+str(date.minute).zfill(2)
 
+
 #Find if the time was specified for an event and what it is
 def get_time(bot,message):
-    text = re.sub(':', '', message.text)
-    text = re.sub('\.', '', message.text)
+    print message.text
+    text = message.text
+    for ch in [':','.',';','-']:
+        if  ch in message.text:
+            print ch
+            text = message.text.replace(ch,'')
+
+#    text = re.sub(':', '', message.text)
+#    text = re.sub('\.', '', message.text)
     match = re.search(r'at\s*(\w+)', text)
+    print "text",text
     if match:
         print match.group(1)
         time = str(match.group(1))
@@ -170,6 +192,16 @@ def get_time(bot,message):
         sendText(bot,message.chat_id,msgs['notime'])
         time = "1930"
     return time
+
+def get_str_list(bot,message,match):
+    if match in message.text:
+        string = message.text.split("with",1)[1]
+        split_list = [element.strip() for element in string.split(',')]
+        return split_list
+    else:
+        return []
+    
+    
 def get_dtime(dtime):
     days, seconds = dtime.days, dtime.seconds
     hours = days * 24 + seconds // 3600

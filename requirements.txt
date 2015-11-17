@@ -1,6 +1,14 @@
-All dependencies are pip-able
-python-telegram-bot >v2.8.7      https://github.com/leandrotoledo/python-telegram-bot
-dota2py                          https://github.com/andrewsnowden/dota2py
-requests
-matplotlib
-numpy
+cycler==0.9.0
+dota2py==0.1.3
+future==0.15.2
+matplotlib==1.5.0
+numpy==1.10.1
+omdb==0.5.0
+pyowm==2.2.1
+pyparsing==2.0.6
+python-dateutil==2.4.2
+python-telegram-bot==2.9.2
+pytz==2015.7
+requests==2.8.1
+six==1.10.0
+wsgiref==0.1.2

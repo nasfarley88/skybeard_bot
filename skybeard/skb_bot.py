@@ -3,8 +3,8 @@ import telegram
 import re
 import logging
 import random
-from beard_functions import *
-from dota_functions import *
+import beard_functions as bf
+import dota_functions as df
 import pdb
 from dota2py import api
 import sys
@@ -12,6 +12,7 @@ from os.path import abspath, join, dirname
 import os
 from datetime import date, timedelta
 import msg_texts
+import register as reg
 
 sys.path.append(abspath(join(abspath(dirname(__file__)), "..")))
 
@@ -47,8 +48,9 @@ def main():
     stack_queries = ['5 stack','5stack','stacked']
     greetings = ['hello','hi','hey']
     goodbyes = ['goodbye','bye','laters','cya']
+    thanks = ['thanks','cheers','nice one']
     gainz_words = ['gainz']
-    
+    dota_checked = False
     #long polling skybeard bot
     while True:
 
@@ -66,93 +68,148 @@ def main():
             message = update.message
             text = update.message.text.encode('utf-8')
             user = update.message.from_user
-           
+          
+
+
+            if (dota_exists and not dota_checked):
+                dota_t_check = dotes.tcheck(message)
+                print "checked",LAST_UPDATE_ID
+                if (dota_t_check):
+                    dota_checked = True
+
             ############ MESSAGE HANDLING ############
             ##########################################           
             
             #test photo sending is working
-            if command('/phototest',text):
-               postImage('feed.png',chat_id,BASE_URL) 
-            
+            if bf.command('/phototest',text):
+               bf.postImage(text.split('/phototest ',1)[1],chat_id,BASE_URL) 
+           
+            #post space cat pics
+            if bf.command('give me spacecats',text) or bf.command('show me spacecats',text):
+                bf.postCats(bot,message)
+
             #send help text
-            if command('/help',text):
-                sendText(bot,chat_id,msg_texts.help())
+            if bf.command('/help',text):
+                bf.sendText(bot,chat_id,msg_texts.help())
             
+            if bf.command('/weather',text):  #does not work in python2.6
+                bf.forecast(bot,message)
+
+            if bf.command('/movie',text):
+                try:
+                    title = text.split('/movie ',1)[1]
+                except:
+                    bf.sendText(bot,chat_id,'Please specify a film title')
+                else:
+                    bf.movies(bot,message,title)
+                
+            if bf.command('/register',text):
+                reg.regCats(bot,message)
+            
+            if bf.command('/catabase',text):
+                reg.printCats(bot,message)
+
+            if bf.command('/catdump',text):
+                reg.dumpCats(bot,message)
+            
+            if bf.command('/delete cat',text):
+                reg.deleteCat(bot,message)
+            
+            if bf.command('/echo',text):
+                bf.echocats(bot,message)
+
             #send top dota feeders table and graph
-            if command('/topfeeds',text):
-                imgPath = feeding(bot,message)
-                postImage(imgPath,chat_id,BASE_URL) 
+            if bf.command('/topfeeds',text):
+                if 'update' in text.lower():
+                    update_feeds = True
+                else:
+                    update_feeds = False
+                print update_feeds
+                imgPath = bf.feeding(bot,message,update_feeds)
+                bf.postImage(imgPath,chat_id,BASE_URL) 
             
             #post last dota match details of user  
-            if command('/lastmatch',text):
-                last_match(bot,message)
+            if bf.command('/lastmatch',text):
+                bf.last_match(bot,message)
             
             #create or modify time of dota event
-            if command('/dota',text):
+            if bf.command('/dota',text):
+                dota_checked = False
                 time = events.get_time(bot,message)
                 if (dota_exists):
                     dotes.set_time(time)
                     sendText(bot,chat_id,'Dota time modified')
                     dotes.time_info(message)
                 else:    
+                    shotguns = events.get_str_list(bot,message,'with')
                     dotes = events.dota(bot,message,time)
+                    print shotguns
+                    if shotguns:
+                        for cat in shotguns:
+                            dotes.shotgun(message,cat)
+
+
             
             #delete dota event
-            if command('/delete dota',text): 
+            if bf.command('/delete dota',text): 
                 if (dota_exists):
-                    sendText(bot,chat_id,'Dota event deleted')
+                    bf.sendText(bot,chat_id,'Dota event deleted')
                     del dotes
                 else:
                     events.nodota(bot,message)
             
             #shotgun a place in dota
-            if command('shotgun!',text):
+            if bf.command('shotgun!',text):
                 if (dota_exists):
                     dotes.shotgun(message)
                 else:
                     events.nodota(bot,message)
             
             #unshotgun your place in dota
-            if command('unshotgun!',text):
+            if bf.command('unshotgun!',text):
                 if (dota_exists):
                     dotes.unshotgun(message,'shotgun')
                 else:
                     events.nodota(bot,message)
             
             #ready up for dota
-            if command('unrdry!',text):
+            if bf.command('unrdry!',text):
                 if (dota_exists):
                     dotes.unshotgun(message,'rdry')
                 else:
                     events.nodota(bot,message)
             #un-ready up for dota
-            if command('rdry!',text):
+            if bf.command('rdry!',text):
                 if (dota_exists):
                     dotes.rdry_up(message)
                 else:
                     events.nodota(bot,message)
             
             #post motivational lifting pics
-            if keywords(gainz_words,text.lower()):
-                gainz(bot,chat_id,message)
+            if bf.keywords(gainz_words,text.lower()):
+                bf.gainz(bot,chat_id,message)
+            
+            #reply to thank you messages
+            if bf.keywords(thanks,text.lower()) and  ('skybeard' in text.lower()):
+                bf.thank(bot,chat_id,message)
             
             #reply to greetings messages
-            if keywords(greetings,text.lower()) and  ('skybeard' in text.lower()):
-                greet(bot,chat_id,message)
+            if bf.keywords(greetings,text.lower()) and  ('skybeard' in text.lower()):
+                bf.greet(bot,chat_id,message)
             
             #reply to farewell messages
-            if (keywords(goodbyes,text.lower())) and ('skybeard' in text.lower()):
-                goodbye(bot,chat_id,message)
+            if (bf.keywords(goodbyes,text.lower())) and ('skybeard' in text.lower()):
+                bf.goodbye(bot,chat_id,message)
             
             #respond to queries on wif dota is 5 stacked or not
-            if (keywords(stack_queries,text.lower())):
+            if (bf.keywords(stack_queries,text.lower())):
                 if (dota_exists):
                     dotes.stack(message)
                 else:
                     events.nodota(bot,message)
             
             #respond to queries about dota event details        
-            if keywords(dota_queries,text.lower()) and ('dota' in text.lower()):
+            if bf.keywords(dota_queries,text.lower()) and ('dota' in text.lower()):
                 if (dota_exists):
                     dotes.time_info(message)
                 else:
