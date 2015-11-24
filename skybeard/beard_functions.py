@@ -11,16 +11,20 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg') #disable x-forwarding
 import matplotlib.pyplot as plt
-import pickle
+import yaml as pickle
 import pyowm
 import omdb
+import logging
+logging.basicConfig(filename='botlog.log',
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logging.getLogger().addHandler(logging.StreamHandler())
 #Request, format and send dota last match info
 def last_match(bot, message):
     sendText(bot,message.chat_id,msgs['getmatch'])
     try:
         dota_id = get_dota_id_from_telegram(message.from_user.first_name)
-        print dota_id
-        print message.from_user.first_name
+        logging.info('Last match request:',dota_id,message.from_user.first_name)
         match_id = getLastMatch(dota_id)
         bot.sendMessage(chat_id=message.chat_id,
             text="[Requested DotaBuff page for match "
@@ -45,11 +49,11 @@ def feeding(bot,message,update=False):
         try:
             feeds = pickle.load(open('catabase/feeds.p','rb')) 
         except Exception as e:
-            print(e)
+            logging.error(e)
             sendText(bot,message.chat_id,'Local feed data not found...')
             sendText(bot,message.chat_id,msgs['serverpoll'])
             feeds = valRank('deaths')
-            print feeds
+            logging.info('feeding data defaulted to:', feeds)
             pickle.dump(feeds,open('catabase/feeds.p','wb'))
     i=0;
     for rank in feeds:
@@ -72,19 +76,20 @@ def feeding(bot,message,update=False):
     match_ids = feeds[0]['match_list']
     N= len(feed_values)
     ind = np.arange(N)
-    width =0.35
+    width =0.8
     bars = ax.bar(ind, feed_values, width,
-                            color='red')
+                            color='#e2e6ed')
+    ax.set_axis_bgcolor('#bcc5d4')
     ax.set_xlim(-width,len(ind)+width)
-    ax.set_ylim(0,45)
+    ax.set_ylim(0,max(feed_values)+2)
     ax.set_ylabel('deaths per game')
     ax.set_title(feeds[0]['dota_name']+'\'s graph of shame')
     ax.set_xticks(ind+width)
     ax.set_xlabel('games')
     xtickNames = ax.set_xticklabels(match_ids)
-    plt.setp(xtickNames, rotation=45, fontsize=10)
+    plt.setp(xtickNames, rotation=90, fontsize=6)
     imgPath = 'img/feed.png'
-    plt.savefig(imgPath)
+    plt.savefig(imgPath,facecolor='#bcc5d4')
     
     return imgPath 
 
@@ -108,10 +113,10 @@ def keywords(words,text):
 
 #for printing to terminal. Switching to logging module instead
 def infoprint(bot,message,text):
-    print("\nSKYBEARD ACTION\n["+text+"]")
-    print ("USER: "),message.from_user.id,message.from_user.first_name 
-    print ("USER MESSAGE:")
-    print '"'+message.text+'"\n'
+    logging.info(("\nDota info request:\n["+text+"]"))
+    logging.info("USER: ",message.from_user.id,message.from_user.first_name) 
+    logging.info("USER MESSAGE:")
+    logging.info(message.text)
 
 #Show chat members why they should go lift
 def gainz(bot,chat_id,message):
@@ -152,7 +157,10 @@ def postCats(bot,message):
 def postImage(imagePath,chat_id,REQUEST_URL):
 #    pdb.set_trace()
     data = {'chat_id': chat_id}
-    files = {'photo': open(imagePath,'rb')}
+    try:
+        files = {'photo': open(imagePath,'rb')}
+    except:
+        return
     return requests.post(REQUEST_URL + '/sendPhoto', params=data, files=files)
     
 #possibility of uploading pics to dropbox with this function (needs python 2.7 or greater)    
@@ -181,7 +189,7 @@ def movies(bot,message,title):
                 '&s=all'
                 ]
         url = ''.join(url_elements)
-        print url
+        logging.info('imdb url built',url)
         return url
         
     
@@ -193,7 +201,7 @@ def movies(bot,message,title):
         bot.sendMessage(chat_id=chat_id,text=buildImdbUrl(title),disable_web_page_preview=True)
         #sendText(bot,message.chat_id,str(buildImdbUrl(title)),True)
     else:
-        print result
+        logging.info('omdb result:', result)
         film = result.title
         year = result.year
         director = result.director
@@ -214,7 +222,7 @@ def movies(bot,message,title):
         try:
             bot.sendPhoto(chat_id=chat_id,photo=poster)
         except:
-            print "no poster found"
+            logging.error("no poster found",result)
         sendText(bot,chat_id,reply)
         sendText(bot,chat_id,imdb,True)
 
@@ -222,6 +230,7 @@ def movies(bot,message,title):
 #python 2.7+ only
 #gives current weather and forecast for given location.
 def forecast(bot,message):
+    
     owm = pyowm.OWM(os.environ.get('OWM_TOKEN'))
     text = message.text
     
@@ -232,17 +241,64 @@ def forecast(bot,message):
     if not location:
         location = 'Birmingham,uk'
     try:    
-        forecast = owm.daily_forecast(location)
+        forecast = owm.daily_forecast(location,limit=7)
+        tomorrow = pyowm.timeutils.tomorrow()
+        weather_tmrw = forecast.get_weather_at(tomorrow)
     except:
-        return sendText(bot,chat_id,'I\'m sorry, something went wrong.')
-
+        return sendText(bot,message.chat_id,'I\'m sorry, something went wrong.')
+        
     true_location = forecast.get_forecast().get_location().get_name()
     coor_lon =  forecast.get_forecast().get_location().get_lon()
     coor_lat =  forecast.get_forecast().get_location().get_lat()
+
+    
+    lst_clouds = []
+    lst_temp = []
+    lst_status = []
+    lst_time = []
     
 
-    tomorrow = pyowm.timeutils.tomorrow()
-    weather_tmrw = forecast.get_weather_at(tomorrow)
+    f_day = forecast.get_forecast()
+    for weather in f_day:
+        lst_clouds.append( weather.get_clouds())
+        lst_temp.append(weather.get_temperature('celsius')['max'])
+        lst_status.append(weather.get_status())
+        lst_time.append(weather.get_reference_time('iso'))
+    print lst_clouds,lst_temp,lst_status,lst_time,len(lst_temp)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    N= len(lst_status)
+    ind = np.arange(N)
+    width =0.6
+    bars_temp = ax.bar(ind, lst_temp, width,
+                            color='#e2e6ed')
+#    bars_cloud = ax.bar(ind, lst_temp, width,
+#                            color='blue')
+    ax.set_axis_bgcolor('#bcc5d4')
+    ax.set_xlim(-width,len(ind)+width)
+    ax.set_ylim(0,max(lst_temp)+5)
+    ax.set_title('Seven day forecast')
+    ax.set_xticks(ind+width)
+    ax.set_xlabel('Next 7 days')
+    ax.set_ylabel('Max. temperature (C)')
+    plt.yticks(np.arange(min(lst_temp), max(lst_temp)+1, 1.0)) 
+    xtickNames = ax.set_xticklabels(lst_status)
+#    ax.legend(bars_temp[0],'max temp. (C)')
+    plt.setp(xtickNames, rotation=45, fontsize=15)
+    imgPath = 'img/weather.png'
+    plt.savefig(imgPath,facecolor='#bcc5d4')
+    
+#    def autolabel(rects):
+#        # attach some text labels
+#        for rect in rects:
+#            height = rect.get_height()
+#            ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
+#                    '%d' % int(height),
+#                    ha='center', va='bottom')
+#    autolabel(bars_temp)
+#    autolabel(bars_cloud)
+    
     temp_tmrw = weather_tmrw.get_temperature('celsius')
     if forecast.will_be_sunny_at(tomorrow):
         status = 'sunny'
@@ -254,28 +310,36 @@ def forecast(bot,message):
         status = 'snowy'
     elif forecast.will_be_stormy_at(tomorrow):
         status = 'stormy'
+    elif forecast.will_be_foggy_at(tomorrow):
+        status = 'foggy'
+    elif forecast.will_be_tornado_at(tomorrow):
+        status = 'TORNADO!!'
+    elif forecast.will_be_hurricane_at(tomorrow):
+        status = 'HURRICANE!!'
     else:
         status = '<unknown status>'
     
-    print temp_tmrw 
+    logging.info('forecast request:',message,forecast) 
     fore_reply = 'Tomorrow in '+true_location+', it will be *'+status+'* with a maximum temperature of *'+str(temp_tmrw['max'])+'* degrees C' 
     
 
     observation = owm.weather_at_place(location)
     weather = observation.get_weather()
-    print weather
+    logging.info('weather results:',message,weather)
     obs_wind = weather.get_wind()
     obs_temp = weather.get_temperature('celsius')
 
-#    sendText(bot,message.chat_id,
-#            'Current weather observations in '+true_location+":")
-    obs_reply = 'Current weather status in *'+true_location+': ' +str(weather.get_status())+'*.\nWind speed (km/h):\t*'+str(obs_wind['speed'])+'*. Temperature (C):\t*'+str(obs_temp['temp'])+'*'
+    obs_reply = 'Current weather status in *'+true_location+': ' +str(weather.get_detailed_status())+'*.\nWind speed (km/h):\t*'+str(obs_wind['speed'])+'*. Temperature (C):\t*'+str(obs_temp['temp'])+'*'
     
     sendText(bot,message.chat_id,obs_reply)
 
     sendText(bot,message.chat_id,fore_reply)
     
     bot.sendLocation(message.chat_id,coor_lat,coor_lon)
+
+    return imgPath
+
+
 
 def thank(bot,chat_id,message):
 
@@ -298,5 +362,5 @@ def goodbye(bot,chat_id,message):
 
 def echocats(bot,message):
     echo = message.text.split('/echo',1)[1]
-    sendText(bot,int(os.environ.get('TG_CHAT')),echo)
+    sendText(bot,-17644459,echo)
 

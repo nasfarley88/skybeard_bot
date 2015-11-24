@@ -30,7 +30,7 @@
 #load_map()
 #
 import telegram
-import pickle
+import yaml as pickle
 import shutil
 import beard_functions as bf
 from msg_texts import * 
@@ -128,18 +128,38 @@ def permission(message,db_entry):
     else:
         return False
 
+def is_user_admin(message):
+    user_id = message.from_user.id
+
+    try:
+        admins = pickle.load(open('catabase/catmins.p','rb'))
+    except:
+        admins = []
+
+    if user_id in admins:
+        return True
+    else:
+        return False
+
 def printCats(bot,message):
     cats = getCats()
     print cats
-
-    bf.sendText(bot,message.chat_id,'Catabase entries:')
+    
+    db_size = len(cats)
+    bf.sendText(bot,message.chat_id,'There are '+str(db_size)+' catabase entries:')
+    entry_found = False
     for index in range (0,len(cats)):
         cat = cats[index]
-        vals = [str(i) for i in cat.values()]
-        bf.sendText(bot,message.chat_id,str(index)+', '+', '.join(vals))
+        if permission(message,cat):
+            entry_found = True
+            vals = [str(i) for i in cat.values()]
+            bf.sendText(bot,message.chat_id,str(index)+', '+', '.join(vals))
+    if not entry_found:
+            bf.sendText(bot,message.chat_id,'It appears as though you do not have permission to view any entries.')
 
 def dumpCats(bot,message):
     cats = getCats()
     for cat in cats:
         bf.sendText(bot,message,str(cat))
         print cat
+
