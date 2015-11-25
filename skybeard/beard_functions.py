@@ -11,10 +11,12 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg') #disable x-forwarding
 import matplotlib.pyplot as plt
-import yaml as pickle
+import pickle
+import yaml
 import pyowm
 import omdb
 import logging
+import math
 logging.basicConfig(filename='botlog.log',
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -284,22 +286,11 @@ def forecast(bot,message):
     ax.set_ylabel('Max. temperature (C)')
     plt.yticks(np.arange(min(lst_temp), max(lst_temp)+1, 1.0)) 
     xtickNames = ax.set_xticklabels(lst_status)
-#    ax.legend(bars_temp[0],'max temp. (C)')
     plt.setp(xtickNames, rotation=45, fontsize=15)
     imgPath = 'img/weather.png'
     plt.savefig(imgPath,facecolor='#bcc5d4')
-    
-#    def autolabel(rects):
-#        # attach some text labels
-#        for rect in rects:
-#            height = rect.get_height()
-#            ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
-#                    '%d' % int(height),
-#                    ha='center', va='bottom')
-#    autolabel(bars_temp)
-#    autolabel(bars_cloud)
-    
     temp_tmrw = weather_tmrw.get_temperature('celsius')
+    
     if forecast.will_be_sunny_at(tomorrow):
         status = 'sunny'
     elif forecast.will_be_sunny_at(tomorrow):
@@ -339,6 +330,39 @@ def forecast(bot,message):
 
     return imgPath
 
+def haversine(lat1,lon1,lat2,lon2,radius):
+
+    earth_radius = 6371
+    theta1 = math.radians(lon1)
+    theta2 = math.radians(lon2)
+    
+    phi1 = math.radians(90.- lat1)
+    phi2 = math.radians(90.-lat2)
+    
+    c = cos = (math.sin(phi1)*math.sin(phi2)*math.cos(theta1-theta2)+math.cos(phi1)*math.cos(phi2))
+    d = math.acos(c)*earth_radius
+    
+    if d < radius:
+        return True
+    else:
+        return False
+
+
+    
+
+def locCheck(bot,message): 
+
+    lon = message.location.longitude
+    lat = message.location.latitude
+    gyms = yaml.load(open('catabase/gyms.yaml','rb'))
+    name = message.from_user.first_name
+
+    for gym in gyms:
+        if haversine(gym['lat'],gym['lon'],lat,lon,0.1):
+            return sendText(bot,message.chat_id,'Good job on the gains at ' +gym['name']+' '+name+', I\'m proud of you')
+        else:
+            return
+            
 
 
 def thank(bot,chat_id,message):

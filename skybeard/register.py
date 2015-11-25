@@ -30,7 +30,7 @@
 #load_map()
 #
 import telegram
-import yaml as pickle
+import pickle
 import shutil
 import beard_functions as bf
 from msg_texts import * 
