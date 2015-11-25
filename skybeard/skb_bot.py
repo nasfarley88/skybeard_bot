@@ -85,7 +85,12 @@ def main():
 
                 ############ MESSAGE HANDLING ############
                 ##########################################           
-                
+
+
+
+                #location testing
+                if (message.location):
+                    bf.locCheck(bot,message)
                 #test photo sending is working
                 if bf.command('/phototest',text):
                     bf.postImage(text.split('/phototest ',1)[1],chat_id,BASE_URL) 
