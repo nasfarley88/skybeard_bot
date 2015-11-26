@@ -6,20 +6,13 @@ import sys
 from os.path import abspath, join, dirname
 import os
 from datetime import date, timedelta
-
+import requests
+import register as reg
 #Spacecats dictionary for steam id and name lookup.
 #All functions currently use first_name value from telegram message.
 #All functions are agnostic of which identifier is used. message.from_user.id is safer,
 #will implement method to register user with telegram id and ue config file instead of dict.
-spacecats = [
-        {'dota_name':'Lance Maverick'   ,'dota_id':11632278,    'first_name':'Peter'   },
-        {'dota_name':'Kitt Spheromak'   ,'dota_id':17584723,    'first_name':'George'  },
-        {'dota_name':'Rick Tiverick'    ,'dota_id':60362246,    'first_name':'Loz'     },
-        {'dota_name':'Plato McBane'     ,'dota_id':46134077,    'first_name':'Simon'   },
-        {'dota_name':'Archimedes Steel' ,'dota_id':48097133,    'first_name':'Jack'    },
-        {'dota_name':'Francis Badass'   ,'dota_id':52188461,    'first_name':'Ian'     },
-        {'dota_name':'Stephen Dedalus'  ,'dota_id':5805252,     'first_name':'Charles' }
-     ]                                                        
+
 
 
 #returns last 25 matches for given user
@@ -36,7 +29,7 @@ def getResults(match,key):
     return vals_list
 
 
-#Takes list of players from match an returns the value of an attribute
+#Takes list of players from match and returns the value of an attribute
 #for a given player, e.g deaths, hero healing, tower damage etc
 def getPlayerVal(vals_list,account_id,val):
 
@@ -51,33 +44,30 @@ def getPlayerVal(vals_list,account_id,val):
 def getSum(account_id,days,attribute):
     
     matches = findMatches(account_id)
-    
     match_ids = []
     attr_list = []
     
     for i in range (0,25):
         if matches[i].has_key("match_id"):
-            print "True",i
-            print  matches[i]["match_id"]
-            match = api.get_match_details(matches[i]["match_id"])
-            match_ids.append(matches[i]['match_id'])
-            results = getResults(match,'players')
-            attr_list.append(getPlayerVal(results,account_id,attribute))
+            try:
+                print  'match: ', matches[i]["match_id"], 'player: ',account_id
+                match = api.get_match_details(matches[i]["match_id"])
+                match_ids.append(matches[i]['match_id'])
+                results = getResults(match,'players')
+                attr_list.append(getPlayerVal(results,account_id,attribute))
+            except requests.exceptions.HTTPError as e:
+                print "REQUEST ERROR:",str(e)
+
     return zip(match_ids,attr_list)    
 
 
 #To link telegram user with dota player. Any unique identifier from
 #telegram can be used.
 def get_dota_id_from_telegram(user_id):
-    
-    for i, spacecat in enumerate(spacecats):
-        #change to user_id when I have everyone's id
-        if spacecat['first_name'] == user_id:
-            index = i
-        else:
-            return 11632278 #my id.
-        return spacecats[index]['dota_id']
 
+    spacecats = reg.getCats()
+    catmatch = filter(lambda cat: cat['first_name'] == user_id, spacecats)
+    return catmatch[0]['dota_id']
 
 #Returns the last match of a given player 
 def getLastMatch(dota_id):
@@ -87,31 +77,32 @@ def getLastMatch(dota_id):
     return match_id
 
 
-#Returns ranked dict based on deaths.
-#Should be made more general for any attribute
-def feedRank():
-
+#Returns ranked dict based on player value.
+def valRank(val):
+    spacecats = reg.getCats() 
     results = []
     for spacecat in  spacecats:
         name = spacecat['dota_name']
         account_id = spacecat['dota_id']
-        deaths = getSum(account_id,7,'deaths')
-        death_lists = zip(*deaths)
-        top_index =death_lists[1].index(max(death_lists[1]))
-        top_deaths = death_lists[1][top_index]
-        top_match = death_lists[0][top_index]
+        vals = getSum(account_id,7,val)
+        val_lists = zip(*vals)
+        top_index =val_lists[1].index(max(val_lists[1]))
+        top_vals = val_lists[1][top_index]
+        top_match = val_lists[0][top_index]
        
-        total_deaths=sum(death_lists[1])
+        total_vals=sum(val_lists[1])
         
         result = {
                 'dota_name':name,
                 'dota_id':account_id,
-                'total_deaths':total_deaths,
+                'total_vals':total_vals,
                 'top_match':top_match,
-                'top_deaths':top_deaths
+                'top_vals':top_vals,
+                'val_list':val_lists[1],
+                'match_list':val_lists[0]
                 }
         results.append(result)
     
-    ranked = sorted(results, key=lambda k: k['total_deaths'],reverse=True) 
+    ranked = sorted(results, key=lambda k: k['total_vals'],reverse=True) 
     return ranked
 
